@@ -32,7 +32,7 @@ def main():
     for c, i in enumerate(orig_data):
         print(c)
         minhash = MinHash(num_perm=128)
-        for d in ngrams(i, 3):
+        for d in ngrams(i, 5):
             minhash.update(''.join(d).encode('utf-8'))
         lsh.insert(c, minhash)
         minhashes[c] = minhash
