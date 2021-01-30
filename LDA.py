@@ -15,14 +15,13 @@ def main(start, end, increment):
     # configure logging
     logging.basicConfig(stream=sys.stdout, format='%(asctime)s : %(levelname)s : %(message)s', level=logging.INFO)
     data_words = []
-    with open(path / 'Processed.json') as f:
+    with open(path / 'ProcessedSimilarRemoved.json') as f:
         data = json.load(f)
         for tweet in data:
-            data_words.append(tweet[1])
+            data_words.append(tweet['text'])
     # create dictionary, corpus, and tdm
     id2word = gensim.corpora.Dictionary(data_words)
-    texts = data_words
-    corpus = [id2word.doc2bow(text) for text in texts]
+    corpus = [id2word.doc2bow(text) for text in data_words]
     # view corpus
     # print([[(id2word[id], freq) for id, freq in cp] for cp in corpus[:1]])
     for k in range(start, end, increment):
@@ -32,7 +31,7 @@ def main(start, end, increment):
         # save model
         file = datapath(path / ('Models/Model%s' % k))
         lda_model.save(file)
-        pickle.dump(corpus, open(path / ('Models/Corp%s.pkl' % k), 'wb'))
+    pickle.dump(corpus, open(path / 'Models/Corp.pkl', 'wb'))
 
 
 if __name__ == '__main__':

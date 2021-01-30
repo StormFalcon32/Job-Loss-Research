@@ -13,10 +13,10 @@ def main(start, end, increment):
     logging.basicConfig(stream=sys.stdout, format='%(asctime)s : %(levelname)s : %(message)s', level=logging.INFO)
     coherence_values_cv = []
     data_words = []
-    with open(path / 'Processed.json') as f:
+    with open(path / 'ProcessedSimilarRemoved.json') as f:
         data = json.load(f)
         for tweet in data:
-            data_words.append(tweet[1])
+            data_words.append(tweet['text'])
     for k in range(start, end, increment):
         # load model
         file = datapath(path / ('Models/Model%s' % k))

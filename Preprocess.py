@@ -22,11 +22,17 @@ def replace_at_user(text):
     return text
 
 """ Replaces contractions from a string to their equivalents """
-contraction_patterns = [ (r'won\'t', 'will not'), (r'can\'t', 'cannot'), (r'i\'m', 'i am'), (r'ain\'t', 'is not'), (r'(\w+)\'ll', r'\g<1> will'), (r'(\w+)n\'t', r'\g<1> not'), (r'(\w+)\'ve', r'\g<1> have'), (r'(\w+)\'s', r'\g<1> is'), (r'(\w+)\'re', r'\g<1> are'), (r'(\w+)\'d', r'\g<1> would'), (r'&', r'and'), (r'dammit', r'damn it'), (r'dont', r'do not'), (r'wont', r'will not') ]
+contraction_patterns = [(r'won\'t', 'will not'), (r'can\'t', 'cannot'), (r'i\'m', 'i am'), (r'ain\'t', 'is not'), (r'(\w+)\'ll', r'\g<1> will'), (r'(\w+)n\'t', r'\g<1> not'), (r'(\w+)\'ve', r'\g<1> have'), (r'(\w+)\'s', r'\g<1> is'), (r'(\w+)\'re', r'\g<1> are'), (r'(\w+)\'d', r'\g<1> would'), (r'&', r'and'), (r'dammit', r'damn it'), (r'dont', r'do not'), (r'wont', r'will not')]
 def replace_contractions(text):
     patterns = [(re.compile(regex), repl) for (regex, repl) in contraction_patterns]
     for (pattern, repl) in patterns:
         (text, _) = re.subn(pattern, repl, text)
+    return text
+
+def replace_multi_punctuation(text):
+    """ Replaces repetitions of punctuation marks """
+    for punctuation in string.punctuation:
+        text = re.sub(r'(\%s)\1+' % punctuation, ' ' + punctuation + ' ', text)
     return text
 
 def main():
@@ -38,6 +44,7 @@ def main():
             data.append(json.loads(line.rstrip('\n|\r')))
     tokenizer = TweetTokenizer(preserve_case=False)
     processed = []
+    ind = 0
     for tweet in data:
         tweet_id = tweet['id']
         text = tweet['text']
@@ -50,37 +57,41 @@ def main():
             tweet_type = 'retweet'
         num_retweets = tweet['retweet_count']
         num_likes = tweet['favorite_count']
-        hashtags = ''
-        mentions = ''
+        hashtags = ' '.join([tweet['entities']['hashtags'][i]['text'] for i in range(len(tweet['entities']['hashtags']))])
+        mentions = []
         if 'extended_tweet' in tweet:
             text = tweet['extended_tweet']['full_text']
             hashtags = ' '.join([tweet['extended_tweet']['entities']['hashtags'][i]['text'] for i in range(len(tweet['extended_tweet']['entities']['hashtags']))])
-            mentions = ' '.join([tweet['extended_tweet']['entities']['user_mentions'][i]['screen_name'] for i in range(len(tweet['extended_tweet']['entities']['user_mentions']))])
+            mentions = [tweet['extended_tweet']['entities']['user_mentions'][i]['id'] for i in range(len(tweet['extended_tweet']['entities']['user_mentions']))]
         if 'retweeted_status' in tweet:
             if 'extended_tweet' in tweet['retweeted_status']:
                 text = tweet['retweeted_status']['extended_tweet']['full_text']
                 hashtags = ' '.join([tweet['retweeted_status']['extended_tweet']['entities']['hashtags'][i]['text'] for i in range(len(tweet['retweeted_status']['extended_tweet']['entities']['hashtags']))])
-                mentions = ' '.join([tweet['retweeted_status']['extended_tweet']['entities']['user_mentions'][i]['screen_name'] for i in range(len(tweet['retweeted_status']['extended_tweet']['entities']['user_mentions']))])
+                mentions = [tweet['retweeted_status']['extended_tweet']['entities']['user_mentions'][i]['id'] for i in range(len(tweet['retweeted_status']['extended_tweet']['entities']['user_mentions']))]
             else:
                 text = tweet['retweeted_status']['text']
                 hashtags = ' '.join([tweet['retweeted_status']['entities']['hashtags'][i]['text'] for i in range(len(tweet['retweeted_status']['entities']['hashtags']))])
-                mentions = ' '.join([tweet['retweeted_status']['entities']['user_mentions'][i]['screen_name'] for i in range(len(tweet['retweeted_status']['entities']['user_mentions']))])
+                mentions = [tweet['retweeted_status']['entities']['user_mentions'][i]['id'] for i in range(len(tweet['retweeted_status']['entities']['user_mentions']))]
         orig_text = text
+        text = text.lower()
         text = remove_non_ascii(text)
         text = remove_unicode(text)
         text = replace_at_user(text)
         text = replace_contractions(text)
+        text = ' '.join([word if 't.co' not in word else 'URL' for word in text.split()])
+        text = replace_multi_punctuation(text)
         text = emoji.demojize(text, delimiters=('', ''))
         # turn all whitespace into single space
         text = ' '.join(text.split())
         text = tokenizer.tokenize(text)
-        text = [word if 't.co' not in word else 'URL' for word in text]
         text = [word for word in text if word not in string.punctuation]
         text = [word for word in text if word not in stop_words]
-        row = [tweet_id, text, orig_text, username, timestamp, tweet_type, num_retweets, num_likes, hashtags, mentions]
-        processed.append(row)
+        row = {'ind' : ind, 'id' : tweet_id, 'text' : text, 'orig_text' : orig_text, 'username' : username, 'timestamp' : timestamp, 'type' : tweet_type, 'retweets' : num_retweets, 'likes' : num_likes, 'hashtags' : hashtags, 'mentions' : mentions}
+        if tweet['lang'] == 'en':
+            processed.append(row)
+        ind += 1
     with open(path.parent / 'Processed.json', 'w') as f:
-        json.dump(processed, f)
+        json.dump(processed, f, indent=4)
 
 
 if __name__ == '__main__':

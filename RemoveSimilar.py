@@ -11,7 +11,7 @@ def main():
     with open(path / 'Processed.json') as f:
         data = json.load(f)
         for tweet in data:
-            orig_data.append(tweet[2])
+            orig_data.append(tweet['orig_text'])
 #     orig_data = ['@PAAuditorGen today marks 60 days I’ve been unemployed.  Im still unable to file weekly certs in the PUA system, there are errors in my employment history I can’t correct, they have the wrong Claim Effective Date, the email is useless, and theres still nobody else to contact.',
 #   '@JulieSuCA @CA_EDD Still trying to figure out what’s going on?! None of my unemployment is retroactive. I’ve been unemployed since March (have proof) and the Edd started my claim on April 26th. Haven’t gotten a hold of anyone to help. Please help',
 #   'I got laid off yesterday #FuckCorona https://t.co/J57jaxL1Db',
@@ -44,7 +44,15 @@ def main():
         for j in result:
             if markers[j] != 1:
                 markers[j] = 2
-    final = [data[ind] for ind, val in enumerate(markers) if val != 2]
+    doc_set = set()
+    similar_removed = [data[ind] for ind, val in enumerate(markers) if val != 2]
+    final = []
+    for line in similar_removed:
+        doc = ' '.join(line['text'])
+        if doc in doc_set:
+            continue
+        doc_set.add(doc)
+        final.append(line)
     # for tweet in final:
     #     print(tweet)
     #     print()

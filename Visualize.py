@@ -14,18 +14,17 @@ def main(start, end, increment):
     path = Path('C:/Data/Python/JobLoss')
     logging.basicConfig(stream=sys.stdout, format='%(asctime)s : %(levelname)s : %(message)s', level=logging.INFO)
     data_words = []
-    with open(path / 'Processed.json') as f:
+    with open(path / 'ProcessedSimilarRemoved.json') as f:
         data = json.load(f)
         for tweet in data:
             data_words.append(tweet[1])
+    corpus = pickle.load(open(path / 'Models/Corp.pkl', 'rb'))
     for k in range(start, end, increment):
         # load model
         file = datapath(path / ('Models/Model%s' % k))
         lda_model = gensim.models.ldamodel.LdaModel.load(file)
-        corpus = pickle.load(
-            open(path / ('Models/Corp%s.pkl' % k), 'rb'))
         # visualize
-        vis = pyLDAvis.gensim.prepare(lda_model, corpus, lda_model.id2word)
+        vis = pyLDAvis.gensim.prepare(lda_model, corpus, lda_model.id2word, sort_topics=False)
         # r'C:\Data\Python\JobLoss\Models\Visualizations\Visualization%s.html' % k
         pyLDAvis.save_html(vis, str(path / ('Visualizations/Visualization%s.html' % k)))
 
