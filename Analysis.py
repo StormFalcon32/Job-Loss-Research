@@ -6,7 +6,7 @@ from gensim.test.utils import datapath
 
 
 def topic_distribution(k):
-    path = Path('C:/Data/Python/JobLossBackup1-21')
+    path = Path('C:/Data/Python/JobLoss')
     data_words = []
     orig_data = []
     with open(path / 'Processed.json') as f:
@@ -38,4 +38,4 @@ def topic_distribution(k):
 
 
 if __name__ == '__main__':
-    topic_distribution(10)
+    topic_distribution(15)

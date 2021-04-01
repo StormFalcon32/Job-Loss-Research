@@ -17,7 +17,7 @@ def main(start, end, increment):
     with open(path / 'ProcessedSimilarRemoved.json') as f:
         data = json.load(f)
         for tweet in data:
-            data_words.append(tweet[1])
+            data_words.append(tweet['text'])
     corpus = pickle.load(open(path / 'Models/Corp.pkl', 'rb'))
     for k in range(start, end, increment):
         # load model

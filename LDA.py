@@ -35,4 +35,4 @@ def main(start, end, increment):
 
 
 if __name__ == '__main__':
-    main(11, 12, 1)
+    main(10, 11, 1)
