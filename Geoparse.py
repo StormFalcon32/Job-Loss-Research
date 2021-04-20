@@ -296,8 +296,8 @@ def get_locations(x, shingle_range):
         locations_dict[ind] = locations
         print(ind)
     print(len(locations_dict))
-    # with open(path / 'Locations/Locations.json', 'w') as f:
-    #     json.dump(locations_dict, f, indent=4)
+    with open(path / 'Locations/Locations.json', 'w') as f:
+        json.dump(locations_dict, f, indent=4)
 
 def choropleth(map_type):
     with open(path / 'Locations/Locations.json') as f:
