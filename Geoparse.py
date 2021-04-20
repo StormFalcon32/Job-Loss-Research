@@ -125,11 +125,13 @@ def get_topic(k, x):
 def twitter_location(tweet):
     output = ''
     if tweet['place']['full_name'] in queried_locations:
+        if not queried_locations[tweet['place']['full_name']]:
+            return
         output = queried_locations[tweet['place']['full_name']]
     else:
         try:
             time.sleep(1)
-            location = geolocator.geocode(tweet['place']['full_name'], timeout=1000)
+            location = geolocator.geocode(tweet['place']['full_name'], timeout=10000)
             if location.address != 'United States' and tweet['place']['full_name'] != 'U.S.':
                 location = geolocator.reverse([location.latitude, location.longitude])
                 if 'country_code' not in location.raw['address'] or location.raw['address']['country_code'] != 'us':
@@ -140,7 +142,31 @@ def twitter_location(tweet):
         except AttributeError as e:
             print(e)
             print(tweet['place']['full_name'])
-        return output
+            doc = ner(tweet['place']['full_name'])
+            for ent in doc.ents:
+                if ent.label_ == 'GPE':
+                    if ent.text in queried_locations:
+                        if not queried_locations[ent.text]:
+                            continue
+                        output = queried_locations[ent.text]
+                        return output
+                    else:
+                        try:
+                            time.sleep(1)
+                            location = geolocator.geocode(ent.text, timeout=10000)
+                            if location.address != 'United States' and ent.text != 'U.S.':
+                                location = geolocator.reverse([location.latitude, location.longitude])
+                                if 'country_code' not in location.raw['address'] or location.raw['address']['country_code'] != 'us':
+                                    continue
+                                state = location.raw['address']['state']
+                                output = state
+                                queried_locations[ent.text] = state
+                                return output
+                        except AttributeError as e:
+                            print(e)
+                            print(ent.text)
+                            queried_locations[ent.text] = ''
+    return output
 
 def text_location(tweet_text, shingle_range):
     output = []
@@ -154,11 +180,13 @@ def text_location(tweet_text, shingle_range):
                 had_ents = True
                 if ent.label_ == 'GPE':
                     if ent.text in queried_locations:
+                        if not queried_locations[ent.text]:
+                            continue
                         output.append(queried_locations[ent.text])
                     else:
                         try:
                             time.sleep(1)
-                            location = geolocator.geocode(ent.text, timeout=1000)
+                            location = geolocator.geocode(ent.text, timeout=10000)
                             if location.address != 'United States' and ent.text != 'U.S.':
                                 location = geolocator.reverse([location.latitude, location.longitude])
                                 if 'country_code' not in location.raw['address'] or location.raw['address']['country_code'] != 'us':
@@ -169,6 +197,7 @@ def text_location(tweet_text, shingle_range):
                         except AttributeError as e:
                             print(e)
                             print(ent.text)
+                            queried_locations[ent.text] = ''
         if not had_ents:
             break
     return output
@@ -177,6 +206,8 @@ def user_location(user):
     output = ''
     if user['location']:
         if user['location'] in queried_locations:
+            if not queried_locations[user['location']]:
+                return
             output = queried_locations[user['location']]
         else:
             try:
@@ -192,6 +223,30 @@ def user_location(user):
             except AttributeError as e:
                 print(e)
                 print(user['location'])
+                doc = ner(user['location'])
+                for ent in doc.ents:
+                    if ent.label_ == 'GPE':
+                        if ent.text in queried_locations:
+                            if not queried_locations[ent.text]:
+                                continue
+                            output = queried_locations[ent.text]
+                            return output
+                        else:
+                            try:
+                                time.sleep(1)
+                                location = geolocator.geocode(ent.text, timeout=10000)
+                                if location.address != 'United States' and ent.text != 'U.S.':
+                                    location = geolocator.reverse([location.latitude, location.longitude])
+                                    if 'country_code' not in location.raw['address'] or location.raw['address']['country_code'] != 'us':
+                                        continue
+                                    state = location.raw['address']['state']
+                                    output = state
+                                    queried_locations[ent.text] = state
+                                    return output
+                            except AttributeError as e:
+                                print(e)
+                                print(ent.text)
+                                queried_locations[ent.text] = ''
     return output
 
 def bio_location(user, shingle_range):
@@ -241,13 +296,12 @@ def get_locations(x, shingle_range):
         locations_dict[ind] = locations
         print(ind)
     print(len(locations_dict))
-    with open(path / 'Locations/Locations.json', 'w') as f:
-        json.dump(locations_dict, f, indent=4)
+    # with open(path / 'Locations/Locations.json', 'w') as f:
+    #     json.dump(locations_dict, f, indent=4)
 
 def choropleth(map_type):
     with open(path / 'Locations/Locations.json') as f:
         locations = json.load(f)
-    total = 0
     state_occurences = {}
     for state in us_state_abbrev:
         state_occurences[us_state_abbrev[state]] = 0
@@ -257,37 +311,42 @@ def choropleth(map_type):
         has_state = False
         tweet_states = set()
         if tweet['twitter'] :
-            abbrev = us_state_abbrev[tweet['twitter']]
-            tweet_states.add(abbrev)
-            has_state = True
+            if tweet['twitter'] in us_state_abbrev:
+                abbrev = us_state_abbrev[tweet['twitter']]
+                tweet_states.add(abbrev)
+                has_state = True
         elif tweet['user']:
-            abbrev = us_state_abbrev[tweet['user']]
-            tweet_states.add(abbrev)
-            has_state = True
+            if tweet['user'] in us_state_abbrev:
+                abbrev = us_state_abbrev[tweet['user']]
+                tweet_states.add(abbrev)
+                has_state = True
         elif tweet['bio']:
             for location in tweet['bio']:
-                abbrev = us_state_abbrev[location]
-                tweet_states.add(abbrev)
-                has_state = True
+                if location in us_state_abbrev:
+                    abbrev = us_state_abbrev[location]
+                    tweet_states.add(abbrev)
+                    has_state = True
         elif tweet['text']:
             for location in tweet['text']:
-                abbrev = us_state_abbrev[location]
-                tweet_states.add(abbrev)
-                has_state = True
+                if location in us_state_abbrev:
+                    abbrev = us_state_abbrev[location]
+                    tweet_states.add(abbrev)
+                    has_state = True
         elif tweet['tagged_users']:
             for location in tweet['tagged_users']:
-                abbrev = us_state_abbrev[location]
-                tweet_states.add(abbrev)
-                has_state = True
+                if location in us_state_abbrev:
+                    abbrev = us_state_abbrev[location]
+                    tweet_states.add(abbrev)
+                    has_state = True
         elif tweet['tagged_bios']:
             for location in tweet['tagged_bios']:
-                abbrev = us_state_abbrev[location]
-                tweet_states.add(abbrev)
-                has_state = True
+                if location in us_state_abbrev:
+                    abbrev = us_state_abbrev[location]
+                    tweet_states.add(abbrev)
+                    has_state = True
         if has_state:
             for state in list(tweet_states):
                 state_occurences[state] += 1
-            total += len(tweet_states)
     if map_type == 'combined':
         not_paid_dict = {}
     with open(path / 'Locations/UIData.csv') as f:
@@ -350,7 +409,6 @@ def choropleth(map_type):
         fig = go.Figure(data=go.Choropleth(locations=list(state_occurences.keys()), z=list(state_occurences.values()), zmin=0, zmax=0.001, colorscale='RdPu', locationmode='USA-states'))
         fig.update_layout(title_text='Complaints / Unpaid', geo_scope='usa')
     fig.show()
-    print(total)
     states = [(orig_words[ind_mapping_reverse[int(i)]], locations[i]) for i in locations]
     with open(path / 'Locations/States.json', 'w') as f:
         json.dump(states, f, indent=4)
@@ -360,6 +418,6 @@ if __name__ == '__main__':
     start_time = time.perf_counter()
     # get_topic(15, [0, 12])
     # get_locations([0, 12], 4)
-    choropleth('raw')
+    choropleth('unpaid')
     time_elapsed = time.perf_counter() - start_time
     print(time_elapsed)
