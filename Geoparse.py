@@ -418,6 +418,6 @@ if __name__ == '__main__':
     start_time = time.perf_counter()
     # get_topic(15, [0, 12])
     # get_locations([0, 12], 4)
-    choropleth('unpaid')
+    choropleth('complaints')
     time_elapsed = time.perf_counter() - start_time
     print(time_elapsed)
